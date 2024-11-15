@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    fmt::{self, format, Display},
+    fmt::{self},
 };
 
 pub struct Graph {
@@ -34,52 +34,76 @@ impl Graph {
         Graph { root, adj }
     }
 
-    pub fn dfs(&self) -> Vec<String> {
-        let mut visited = HashSet::new();
-        let mut result = Vec::new();
-        let mut s = String::new();
-        self.dfs_recursive(&self.root, &mut visited, &mut result, &mut s);
-        result
-    }
-
     fn dfs_recursive(
         &self,
         node: &String,
         visited: &mut HashSet<String>,
         result: &mut Vec<String>,
         formatting_string: &mut String,
+        is_last: bool,
     ) {
         // Mark the node as visited
         visited.insert(node.clone());
-        println!("{}{}", formatting_string, node);
-        result.push(node.clone()); // Add node to result list
+        result.push(format!("{}{}", formatting_string, node)); // Add node to result list
 
-        let mut check: bool = false;
-        if formatting_string.ends_with("├─") {
-            // change the last character of formatting_str to a whitespace
-            formatting_string.pop();
-            formatting_string.pop();
-            formatting_string.push_str("│ ");
-            check = true;
+        let mut type1 = false;
+        let mut type2 = false;
+        if formatting_string.ends_with("└─ ") || formatting_string.ends_with("├─ ") {
+            type1 = formatting_string.ends_with("└─ ");
+            type2 = formatting_string.ends_with("├─ ");
+            for _ in 0..3 {
+                formatting_string.pop();
+            }
+            if is_last {
+                formatting_string.push_str("   ");
+            } else {
+                formatting_string.push_str("│  ");
+            }
         }
-        formatting_string.push_str("├─");
 
         // Recursively visit all adjacent nodes
         if let Some(neighbors) = self.adj.get(node) {
-            for neighbor in neighbors {
+            for (i, neighbor) in neighbors.iter().enumerate() {
+                if i == neighbors.len() - 1 {
+                    formatting_string.push_str("└─ ");
+                } else {
+                    formatting_string.push_str("├─ ");
+                }
                 if !visited.contains(neighbor) {
-                    self.dfs_recursive(neighbor, visited, result, formatting_string);
+                    self.dfs_recursive(
+                        neighbor,
+                        visited,
+                        result,
+                        formatting_string,
+                        i == neighbors.len() - 1,
+                    );
+                }
+                for _ in 0..3 {
+                    formatting_string.pop();
                 }
             }
         }
 
-        formatting_string.pop();
-        formatting_string.pop();
-        if check {
-            formatting_string.pop();
-            formatting_string.pop();
-            formatting_string.push_str("├─");
+        if type1 || type2 {
+            for _ in 0..3 {
+                formatting_string.pop();
+            }
+            if type1 {
+                formatting_string.push_str("└─ ");
+            } else {
+                formatting_string.push_str("├─ ");
+            }
         }
+    }
+}
+
+impl fmt::Display for Graph {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut visited = HashSet::new();
+        let mut result = Vec::new();
+        let mut s = String::new();
+        self.dfs_recursive(&self.root, &mut visited, &mut result, &mut s, true);
+        write!(f, "{}", result.join("\n"))
     }
 }
 
@@ -109,7 +133,7 @@ mod tests {
         let graph = Graph::from_edges(&edges);
 
         // Act
-        graph.dfs();
+        println!("{}", graph);
     }
 
     #[test]
